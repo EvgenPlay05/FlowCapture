@@ -63,8 +63,8 @@ Prepare your environment with Android Studio Ladybug (or higher) and JDK 17 to b
 
 1. **Clone the project repository**:
    ```bash
-   git clone https://github.com/EvgenPlay05/FlowCapture/FlowCapture.git
-   cd FlowCapture
+   git clone https://github.com/EvgenPlay05/FlowCapture.git
+cd FlowCapture
    ```
 
 2. **Open the project in Android Studio**.
