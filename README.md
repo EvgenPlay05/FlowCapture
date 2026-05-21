@@ -64,8 +64,8 @@ Prepare your environment with Android Studio Ladybug (or higher) and JDK 17 to b
 1. **Clone the project repository**:
    ```bash
    git clone https://github.com/EvgenPlay05/FlowCapture.git
-cd FlowCapture
-```
+   cd FlowCapture
+   ```
 
 2. **Open the project in Android Studio**.
 3. **Let Gradle sync completed project files**.
@@ -85,6 +85,7 @@ Distributed under the Apache License 2.0. See `LICENSE` for more information.
 ---
 
 *FlowCapture — capture your screen in professional style.*
+
 
 
 
