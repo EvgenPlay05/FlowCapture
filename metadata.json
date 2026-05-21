@@ -1,0 +1,6 @@
+{
+  "name": "FlowCapture",
+  "description": "A lightweight, battery-efficient screen recorder with a Material You design, draggable control bubble, drawing tools, and audio selection.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
