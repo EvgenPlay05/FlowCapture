@@ -65,7 +65,7 @@ Prepare your environment with Android Studio Ladybug (or higher) and JDK 17 to b
    ```bash
    git clone https://github.com/EvgenPlay05/FlowCapture.git
 cd FlowCapture
-   ```
+```
 
 2. **Open the project in Android Studio**.
 3. **Let Gradle sync completed project files**.
