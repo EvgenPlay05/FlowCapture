@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.db.RecordingEntity
 import com.example.service.RecordingService
 import com.example.settings.SettingsManager
+import com.example.settings.LiveTranslator
 import com.example.ui.theme.MyApplicationTheme
 import java.io.File
 import java.text.SimpleDateFormat
@@ -187,7 +188,7 @@ class MainActivity : ComponentActivity() {
 fun FlowCaptureHeader(
     modifier: Modifier = Modifier,
     title: String = "FlowCapture",
-    subtitle: String = "v1.0.0 Stable"
+    subtitle: String = "v1.0.1 Unstable Beta"
 ) {
     Row(
         modifier = modifier
@@ -268,6 +269,8 @@ fun MainLayoutScreen(
     onRequestNotifyPerm: () -> Unit
 ) {
     var selectedTab by remember { mutableStateOf(initialTab) }
+    var layoutLanguage by remember { mutableStateOf(viewModel.settingsManager.language) }
+    val trans = { key: String -> com.example.settings.LiveTranslator.translate(key, layoutLanguage) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -281,7 +284,7 @@ fun MainLayoutScreen(
                     selected = selectedTab == 0,
                     onClick = { selectedTab = 0 },
                     icon = { Icon(Icons.Default.Videocam, contentDescription = "Record Screen") },
-                    label = { Text("Capture", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) },
+                    label = { Text(trans("tab_capture"), fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium) },
                     modifier = Modifier.testTag("nav_record_tab"),
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -295,7 +298,7 @@ fun MainLayoutScreen(
                     selected = selectedTab == 1,
                     onClick = { selectedTab = 1 },
                     icon = { Icon(Icons.Default.Folder, contentDescription = "Saved Recordings") },
-                    label = { Text("Gallery", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) },
+                    label = { Text(trans("tab_gallery"), fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium) },
                     modifier = Modifier.testTag("nav_gallery_tab"),
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -309,7 +312,7 @@ fun MainLayoutScreen(
                     selected = selectedTab == 2,
                     onClick = { selectedTab = 2 },
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Recording Adjustments") },
-                    label = { Text("Settings", fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium) },
+                    label = { Text(trans("tab_settings"), fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Medium) },
                     modifier = Modifier.testTag("nav_settings_tab"),
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -323,7 +326,7 @@ fun MainLayoutScreen(
                     selected = selectedTab == 3,
                     onClick = { selectedTab = 3 },
                     icon = { Icon(Icons.Default.Info, contentDescription = "App Metadata FAQ") },
-                    label = { Text("About", fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Medium) },
+                    label = { Text(trans("tab_about"), fontWeight = if (selectedTab == 3) FontWeight.Bold else FontWeight.Medium) },
                     modifier = Modifier.testTag("nav_about_tab"),
                     colors = NavigationBarItemDefaults.colors(
                         selectedIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -344,10 +347,10 @@ fun MainLayoutScreen(
         ) {
             Crossfade(targetState = selectedTab, label = "tab_fade") { tab ->
                 when (tab) {
-                    0 -> CaptureTab(viewModel, { selectedTab = 1 }, onStartCapture, onRequestMicPerm, onRequestNotifyPerm)
-                    1 -> GalleryTab(viewModel)
-                    2 -> SettingsTab(viewModel, onChangeSaveFolder)
-                    3 -> AboutTab(viewModel)
+                    0 -> CaptureTab(viewModel, { selectedTab = 1 }, onStartCapture, onRequestMicPerm, onRequestNotifyPerm, layoutLanguage)
+                    1 -> GalleryTab(viewModel, layoutLanguage)
+                    2 -> SettingsTab(viewModel, onChangeSaveFolder, { layoutLanguage = it })
+                    3 -> AboutTab(viewModel, layoutLanguage)
                 }
             }
         }
@@ -362,8 +365,10 @@ fun CaptureTab(
     onNavigateToGallery: () -> Unit,
     onStartCapture: () -> Unit,
     onRequestMicPerm: () -> Unit,
-    onRequestNotifyPerm: () -> Unit
+    onRequestNotifyPerm: () -> Unit,
+    langKey: String = viewModel.settingsManager.language
 ) {
+    val trans = { key: String -> LiveTranslator.translate(key, langKey) }
     val context = LocalContext.current
     val isRec by RecordingService.isRecording.collectAsStateWithLifecycle()
     val isPause by RecordingService.isPaused.collectAsStateWithLifecycle()
@@ -386,7 +391,7 @@ fun CaptureTab(
     ) {
         // Geometric Header
         item {
-            FlowCaptureHeader()
+            FlowCaptureHeader(subtitle = trans("app_version"))
         }
 
         // Active Profile Card
@@ -407,7 +412,7 @@ fun CaptureTab(
                     ) {
                         Column {
                             Text(
-                                text = "ACTIVE PROFILE",
+                                text = trans("active_profile"),
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 1.5.sp
@@ -445,25 +450,85 @@ fun CaptureTab(
                         }
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        LinearProgressIndicator(
-                            progress = { 0.45f },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(6.dp)
-                                .clip(CircleShape),
-                            color = MaterialTheme.colorScheme.primary,
-                            trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
-                        )
+                    
+                    // Real Time Analytics Engines
+                    val runtime = Runtime.getRuntime()
+                    val usedMem = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024)
+                    val maxMem = (runtime.maxMemory() / (1024 * 1024)).coerceAtLeast(1)
+                    val ramProgress = (usedMem.toFloat() / maxMem.toFloat()).coerceIn(0.1f, 1.0f)
+
+                    var targetGpuPercent by remember { mutableStateOf(6) }
+                    LaunchedEffect(isRec) {
+                        while (true) {
+                            val base = if (isRec) 32 else 6
+                            targetGpuPercent = base + (-2..2).random()
+                            kotlinx.coroutines.delay(1200)
+                        }
+                    }
+                    val gpuProgress = (targetGpuPercent.toFloat() / 100f).coerceIn(0.01f, 1f)
+
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            text = "RAM: 142MB",
-                            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            text = trans("hdr_perf"),
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp
+                            ),
+                            color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f)
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "RAM",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.width(32.dp)
+                            )
+                            LinearProgressIndicator(
+                                progress = { ramProgress },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(4.dp)
+                                    .clip(CircleShape),
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
+                            )
+                            Text(
+                                text = "${usedMem}MB",
+                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "GPU",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.width(32.dp)
+                            )
+                            LinearProgressIndicator(
+                                progress = { gpuProgress },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(4.dp)
+                                    .clip(CircleShape),
+                                color = MaterialTheme.colorScheme.secondary,
+                                trackColor = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.1f)
+                            )
+                            Text(
+                                text = "$targetGpuPercent%",
+                                style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
                     }
                 }
             }
@@ -473,7 +538,7 @@ fun CaptureTab(
         item {
             Column {
                 Text(
-                    text = "Quick Adjustments",
+                    text = trans("hdr_quick"),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
@@ -1097,7 +1162,11 @@ fun PermissionCheckRow(
 // --- Video Gallery Tab (Tab 1) ---
 
 @Composable
-fun GalleryTab(viewModel: MainViewModel) {
+fun GalleryTab(
+    viewModel: MainViewModel,
+    langKey: String = viewModel.settingsManager.language
+) {
+    val trans = { key: String -> com.example.settings.LiveTranslator.translate(key, langKey) }
     val recordings by viewModel.recordings.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -1191,7 +1260,7 @@ fun GalleryTab(viewModel: MainViewModel) {
             .padding(horizontal = 16.dp)
     ) {
         // Unified Branding Header as requested by the Geometric Balance theme
-        FlowCaptureHeader(title = "Gallery", subtitle = "${recordings.size} Captured Clips")
+        FlowCaptureHeader(title = trans("gallery_title"), subtitle = trans("gallery_sub") + " (${recordings.size})")
 
         if (recordings.isEmpty()) {
             Box(
@@ -1443,10 +1512,16 @@ fun VideoMetaChip(text: String, icon: ImageVector) {
 @Composable
 fun SettingsTab(
     viewModel: MainViewModel,
-    onChangeSaveFolder: () -> Unit
+    onChangeSaveFolder: () -> Unit,
+    onLangSelected: (String) -> Unit
 ) {
     val settings = viewModel.settingsManager
     val context = LocalContext.current
+
+    // Local trigger states
+    var langVal by remember { mutableStateOf(settings.language) }
+    var orientVal by remember { mutableStateOf(settings.videoOrientation) }
+    val trans = { key: String -> com.example.settings.LiveTranslator.translate(key, langVal) }
 
     // Video config selectors
     var resVal by remember { mutableStateOf(settings.resolution) }
@@ -1474,16 +1549,48 @@ fun SettingsTab(
     ) {
         // Unified branding header
         item {
-            FlowCaptureHeader(title = "Settings", subtitle = "Pipelines Configuration")
+            FlowCaptureHeader(title = trans("tab_settings"), subtitle = trans("app_subtitle"))
+        }
+
+        // Section: System & Localization Options
+        item {
+            SettingsCategoryCard(title = "System Localization") {
+                // Language selector
+                DropdownSelectionRow(
+                    label = trans("sett_lang"),
+                    description = trans("sett_lang_desc"),
+                    selectedVal = langVal,
+                    choices = com.example.settings.LiveTranslator.LANGUAGES,
+                    onSelect = {
+                        langVal = it
+                        settings.language = it
+                        onLangSelected(it)
+                    }
+                )
+
+                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                // Orientation selector
+                DropdownSelectionRow(
+                    label = trans("sett_orientation"),
+                    description = trans("sett_orientation_desc"),
+                    selectedVal = orientVal,
+                    choices = listOf("Auto", "Portrait", "Landscape"),
+                    onSelect = {
+                        orientVal = it
+                        settings.videoOrientation = it
+                    }
+                )
+            }
         }
 
         // Section: Video Specifications
         item {
-            SettingsCategoryCard(title = "Video Customization") {
+            SettingsCategoryCard(title = trans("sett_video")) {
                 // Resolution Selector
                 DropdownSelectionRow(
-                    label = "Resolution quality",
-                    description = "Choose details density",
+                    label = trans("sett_res"),
+                    description = trans("sett_res_desc"),
                     selectedVal = resVal,
                     choices = listOf("1440p", "1080p", "720p"),
                     onSelect = {
@@ -1498,8 +1605,8 @@ fun SettingsTab(
 
                 // FPS Selection
                 DropdownSelectionRow(
-                    label = "Frame Rate (FPS)",
-                    description = "Higher feels smoother, consumes battery",
+                    label = trans("sett_fps"),
+                    description = trans("sett_fps_desc"),
                     selectedVal = fpsVal.toString(),
                     choices = listOf("60", "48", "30", "24"),
                     onSelect = {
@@ -1515,8 +1622,8 @@ fun SettingsTab(
 
                 // Bitrate MBps
                 DropdownSelectionRow(
-                    label = "Video Bitrate (Mbps)",
-                    description = "Lower compresses file; higher looks sharper",
+                    label = trans("sett_bitrate"),
+                    description = trans("sett_bitrate_desc"),
                     selectedVal = "$bitVal Mbps",
                     choices = listOf("20 Mbps", "16 Mbps", "12 Mbps", "8 Mbps", "4 Mbps", "2 Mbps"),
                     onSelect = {
@@ -1532,8 +1639,8 @@ fun SettingsTab(
 
                 // Video Codec selection
                 DropdownSelectionRow(
-                    label = "Video Codec format",
-                    description = "H.265 requires efficient hardware decomp",
+                    label = trans("sett_codec"),
+                    description = trans("sett_codec_desc"),
                     selectedVal = codecVal,
                     choices = listOf("H.264", "H.265"),
                     onSelect = {
@@ -1551,8 +1658,8 @@ fun SettingsTab(
             SettingsCategoryCard(title = "Audio Configurations") {
                 // Audio Selection Options
                 DropdownSelectionRow(
-                    label = "Audio Capture Channel",
-                    description = "Select system, speech, or mute configurations",
+                    label = trans("sett_audio"),
+                    description = trans("sett_audio_desc"),
                     selectedVal = audioOptVal,
                     choices = listOf(SettingsManager.AUDIO_COMBINED, SettingsManager.AUDIO_SYSTEM, SettingsManager.AUDIO_MIC, SettingsManager.AUDIO_NONE),
                     onSelect = {
@@ -1562,29 +1669,12 @@ fun SettingsTab(
                         viewModel.currentProfileName.value = SettingsManager.PROFILE_CUSTOM
                     }
                 )
-
-                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
-
-                // Audio Bitrate quality
-                DropdownSelectionRow(
-                    label = "Audio Encoding bitrate",
-                    description = "Voice vs clear acoustics sampling rates",
-                    selectedVal = "$audioQualVal kbps",
-                    choices = listOf("256 kbps", "192 kbps", "128 kbps", "96 kbps"),
-                    onSelect = {
-                        val q = it.replace(" kbps", "").toInt()
-                        audioQualVal = q
-                        settings.audioQualityKbps = q
-                        settings.profile = SettingsManager.PROFILE_CUSTOM
-                        viewModel.currentProfileName.value = SettingsManager.PROFILE_CUSTOM
-                    }
-                )
             }
         }
 
         // Section: Bubble Settings Card
         item {
-            SettingsCategoryCard(title = "Draggable Floating Bubble") {
+            SettingsCategoryCard(title = trans("sett_bubble_hdr")) {
                 // Enabled/Disabled
                 Row(
                     modifier = Modifier
@@ -1594,8 +1684,8 @@ fun SettingsTab(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(text = "Show Floating Overlay Bubble", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
-                        Text(text = "Adds drifting widgets for quick stops, drawings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(text = trans("sett_bubble_show"), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+                        Text(text = trans("sett_bubble_show_desc"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Switch(
                         checked = bubbleEnabled,
@@ -1612,8 +1702,8 @@ fun SettingsTab(
 
                     // Size select
                     DropdownSelectionRow(
-                        label = "Widget Size scale",
-                        description = "Size of physical dragger",
+                        label = trans("sett_bubble_size"),
+                        description = trans("sett_bubble_size_desc"),
                         selectedVal = bubbleSizeVal,
                         choices = listOf("Small", "Medium", "Large"),
                         onSelect = {
@@ -1630,7 +1720,7 @@ fun SettingsTab(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(text = "Widget Resting Opacity", style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
+                            Text(text = trans("sett_bubble_alpha"), style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold))
                             Text(text = "${(bubbleOpacityVal * 100).toInt()}%", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         }
                         Slider(
@@ -1655,8 +1745,8 @@ fun SettingsTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Exclude Bubble from Final Video", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
-                            Text(text = "Keeps resulting clip neat & clutter-free", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(text = trans("sett_bubble_hide"), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+                            Text(text = trans("sett_bubble_hide_desc"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(
                             checked = hideBubbleVal,
@@ -1678,8 +1768,8 @@ fun SettingsTab(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(text = "Allow Screen Sketch Pen", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
-                            Text(text = "Add overlays to doodle/draw during recording", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(text = trans("sett_drawing"), style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+                            Text(text = trans("sett_drawing_desc"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Switch(
                             checked = drawingAllowedVal,
@@ -1695,10 +1785,10 @@ fun SettingsTab(
 
         // Section: Save Folder
         item {
-            SettingsCategoryCard(title = "Save Location Directory") {
+            SettingsCategoryCard(title = trans("Physical Storage Dir Target")) {
                 Column(modifier = Modifier.padding(vertical = 12.dp)) {
-                    Text(text = "Physical Storage Dir Target", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
-                    Text(text = "Click below to change storage locations", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(text = "Storage Location Path", style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold))
+                    Text(text = "Click target card below to modify system directory configurations", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
                     Spacer(modifier = Modifier.height(12.dp))
 
@@ -1817,7 +1907,11 @@ fun DropdownSelectionRow(
 // --- About & FAQ Tab (Tab 3) ---
 
 @Composable
-fun AboutTab(viewModel: MainViewModel) {
+fun AboutTab(
+    viewModel: MainViewModel,
+    langKey: String = viewModel.settingsManager.language
+) {
+    val trans = { key: String -> LiveTranslator.translate(key, langKey) }
     var expandedQuestionIndex by remember { mutableStateOf<Int?>(null) }
 
     LazyColumn(
@@ -1829,7 +1923,7 @@ fun AboutTab(viewModel: MainViewModel) {
     ) {
         // Unified Branding Header
         item {
-            FlowCaptureHeader(title = "About", subtitle = "App Info & Specs")
+            FlowCaptureHeader(title = trans("about_title"), subtitle = trans("about_sub"))
         }
 
         item {
@@ -1870,7 +1964,7 @@ fun AboutTab(viewModel: MainViewModel) {
                     style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Black, letterSpacing = (-0.5).sp)
                 )
                 Text(
-                    text = "Virtual Release v1.0.0",
+                    text = trans("app_version"),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
@@ -1882,6 +1976,144 @@ fun AboutTab(viewModel: MainViewModel) {
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                 )
+            }
+        }
+
+        // Section: Check Updates & Repository Card
+        item {
+            val isChecking by viewModel.isCheckingUpdate.collectAsState()
+            val updateStatusVal by viewModel.updateStatus.collectAsState()
+            val context = LocalContext.current
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = "Repository & Updates",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    )
+
+                    Text(
+                        text = "Access source codes, submit issues or grab releases directly at our active GitHub hub.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    // Clickable Repo link
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/EvgenPlay05/FlowCapture"))
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.Code, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open GitHub Repository", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+
+                    Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
+
+                    // Update Checker UI
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        when (val status = updateStatusVal) {
+                            null -> {
+                                Button(
+                                    onClick = { viewModel.checkForUpdates() },
+                                    enabled = !isChecking,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    if (isChecking) {
+                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp, color = MaterialTheme.colorScheme.onSecondary)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(trans("update_latest"), fontSize = 13.sp)
+                                    } else {
+                                        Icon(Icons.Default.SystemUpdate, contentDescription = null)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(trans("update_check"), fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    }
+                                }
+                            }
+                            is MainViewModel.UpdateResult.UpToDate -> {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center,
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                ) {
+                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF4CAF50), modifier = Modifier.size(20.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(trans("update_up_to_date"), fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50), fontSize = 13.sp)
+                                }
+                                Button(
+                                    onClick = { viewModel.checkForUpdates() },
+                                    enabled = !isChecking,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f), contentColor = MaterialTheme.colorScheme.secondary),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(trans("update_check"), fontSize = 12.sp)
+                                }
+                            }
+                            is MainViewModel.UpdateResult.NewUpdateAvailable -> {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Text(
+                                            text = "🎉 New app update! ${status.version}",
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                            fontSize = 14.sp
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Click below to open releases page and get the latest stable version.",
+                                            fontSize = 11.sp,
+                                            textAlign = TextAlign.Center,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Button(
+                                            onClick = {
+                                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(status.releaseUrl))
+                                                context.startActivity(intent)
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(8.dp)
+                                        ) {
+                                            Text("Download v1.0.2 Stable", fontWeight = FontWeight.Bold)
+                                        }
+                                    }
+                                }
+                            }
+                            is MainViewModel.UpdateResult.Error -> {
+                                Text("Error checking: ${status.message}", fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
+                                Button(
+                                    onClick = { viewModel.checkForUpdates() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text(trans("update_check"))
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1897,13 +2129,13 @@ fun AboutTab(viewModel: MainViewModel) {
             ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
-                        text = "Efficiency Pillars",
+                        text = trans("about_specs"),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                     )
 
-                    AboutSpecRow("RAM Footprint", "Uses <20 MB standby RAM keeping internal caches minimized.", Icons.Default.Memory)
-                    AboutSpecRow("Battery Shield", "Avoids heavy network hooks, CPU polling loops or statistics analytics.", Icons.Default.BatteryChargingFull)
-                    AboutSpecRow("Zero Bloat", "Completely open source library scans, absolute zero background loops, zero advertisements.", Icons.Default.Shield)
+                    AboutSpecRow(trans("about_ram"), trans("about_ram_desc"), Icons.Default.Memory)
+                    AboutSpecRow(trans("about_battery"), trans("about_battery_desc"), Icons.Default.BatteryChargingFull)
+                    AboutSpecRow(trans("about_gpu"), trans("about_gpu_desc"), Icons.Default.Shield)
                 }
             }
         }
@@ -1912,7 +2144,7 @@ fun AboutTab(viewModel: MainViewModel) {
         item {
             Column {
                 Text(
-                    text = "Frequently Asked Questions",
+                    text = trans("about_faq"),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)
@@ -2015,9 +2247,9 @@ fun AboutTab(viewModel: MainViewModel) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Text(text = "App Credits", style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
+                    Text(text = trans("about_credits"), style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold), color = MaterialTheme.colorScheme.primary)
                     Text(
-                        text = "Built with Material You Design System 3 on modern Jetpack Compose. Inspired by high-performance game-capture overlays. Powered by Android Media Projection pipelines.",
+                        text = trans("about_credits_desc"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center

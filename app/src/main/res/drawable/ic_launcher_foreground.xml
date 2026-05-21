@@ -1,8 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item
-        android:width="66dp"
-        android:height="66dp"
-        android:drawable="@drawable/flowcapture_logo_1779380441900"
-        android:gravity="center" />
-</layer-list>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Outer thick technical rim -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#EADDFF"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M 54,20 A 34,34 0 1,1 53.99,20 Z" />
+
+    <!-- Secondary bold target circle -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#6750A4"
+        android:strokeWidth="5"
+        android:pathData="M 54,28 A 26,26 0 1,1 53.99,28 Z" />
+
+    <!-- Inner subtle ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#D0BCFF"
+        android:strokeWidth="2"
+        android:pathData="M 54,39 A 15,15 0 1,1 53.99,39 Z" />
+
+    <!-- Active High-contrast white bullseye core -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M 54,49 A 5,5 0 1,1 53.99,49 Z" />
+        
+    <!-- Tech Crosshair Indicators -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M 54,11 L 54,17 M 54,91 L 54,97 M 11,54 L 17,54 M 91,54 L 97,54" />
+</vector>

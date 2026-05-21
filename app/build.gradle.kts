@@ -14,8 +14,8 @@ android {
     applicationId = "com.aistudio.flowcapture.xpyzlw"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0.0"
+    versionCode = 101
+    versionName = "1.0.1 Unstable Beta"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

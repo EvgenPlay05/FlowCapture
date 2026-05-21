@@ -290,30 +290,55 @@ class RecordingService : LifecycleService(), ViewModelStoreOwner, SavedStateRegi
         val display = (getSystemService(Context.WINDOW_SERVICE) as WindowManager).defaultDisplay
         display.getRealMetrics(metrics)
 
-        // Parse resolution settings
+        // Math-based display scaling keeping 100% exact device ratio without letterboxing or squeeze
+        val realWidth = metrics.widthPixels
+        val realHeight = metrics.heightPixels
+        val maxDimension = maxOf(realWidth, realHeight).toFloat()
+        val minDimension = minOf(realWidth, realHeight).toFloat()
+        val screenAspectRatio = maxDimension / minDimension
+
         val resStr = settingsManager?.resolution ?: "1080p"
-        var width = 1080
-        var height = 1920
-        if (resStr == "720p") {
-            width = 720
-            height = 1280
-        } else if (resStr == "1440p") {
-            width = 1440
-            height = 2560
+        val targetShortSide = when (resStr) {
+            "720p" -> 720
+            "1440p" -> 1440
+            else -> 1080
         }
 
-        // Force correct aspect ratio
-        if (metrics.widthPixels < metrics.heightPixels) {
+        var width = targetShortSide
+        var height = (targetShortSide * screenAspectRatio).toInt()
+
+        // Match video encoder guidelines requiring dimensions divisible by 2
+        if (width % 2 != 0) width--
+        if (height % 2 != 0) height--
+
+        // Orientation force angle configurations
+        val orientKey = settingsManager?.videoOrientation ?: "Auto"
+        if (orientKey == "Portrait") {
             if (width > height) {
                 val temp = width
                 width = height
                 height = temp
             }
-        } else {
+        } else if (orientKey == "Landscape") {
             if (height > width) {
                 val temp = width
                 width = height
                 height = temp
+            }
+        } else {
+            // Auto: Matches active on-screen physics layout
+            if (realWidth < realHeight) {
+                if (width > height) {
+                    val temp = width
+                    width = height
+                    height = temp
+                }
+            } else {
+                if (height > width) {
+                    val temp = width
+                    width = height
+                    height = temp
+                }
             }
         }
 
@@ -336,9 +361,19 @@ class RecordingService : LifecycleService(), ViewModelStoreOwner, SavedStateRegi
         val recordAudio = audioOpt != SettingsManager.AUDIO_NONE
 
         if (recordAudio) {
-            // Note: MIC is standard. System audio capture requires AudioPlaybackCaptureConfig which needs API 29+
-            // Here we setup standard mic source
-            mediaRecorder?.setAudioSource(MediaRecorder.AudioSource.MIC)
+            val source = when (audioOpt) {
+                SettingsManager.AUDIO_MIC -> MediaRecorder.AudioSource.MIC
+                SettingsManager.AUDIO_SYSTEM -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                        MediaRecorder.AudioSource.CAMCORDER
+                    } else {
+                        MediaRecorder.AudioSource.VOICE_RECOGNITION
+                    }
+                }
+                SettingsManager.AUDIO_COMBINED -> MediaRecorder.AudioSource.MIC
+                else -> MediaRecorder.AudioSource.MIC
+            }
+            mediaRecorder?.setAudioSource(source)
         }
 
         mediaRecorder?.setVideoSource(MediaRecorder.VideoSource.SURFACE)
@@ -553,8 +588,7 @@ class RecordingService : LifecycleService(), ViewModelStoreOwner, SavedStateRegi
 
     @Composable
     fun BubbleOverlay() {
-        var offsetX by remember { mutableStateOf(bubbleParams?.x?.toFloat() ?: 100f) }
-        var offsetY by remember { mutableStateOf(bubbleParams?.y?.toFloat() ?: 300f) }
+        val dragCoords = remember { floatArrayOf(bubbleParams?.x?.toFloat() ?: 100f, bubbleParams?.y?.toFloat() ?: 300f) }
         val sizeSelect = settingsManager?.bubbleSize ?: "Medium"
         val opacitySelect = settingsManager?.bubbleOpacity ?: 0.8f
 
@@ -597,10 +631,10 @@ class RecordingService : LifecycleService(), ViewModelStoreOwner, SavedStateRegi
                         detectDragGestures(
                             onDrag = { change, dragAmount ->
                                 change.consume()
-                                offsetX += dragAmount.x
-                                offsetY += dragAmount.y
-                                bubbleParams?.x = offsetX.toInt()
-                                bubbleParams?.y = offsetY.toInt()
+                                dragCoords[0] += dragAmount.x
+                                dragCoords[1] += dragAmount.y
+                                bubbleParams?.x = dragCoords[0].toInt()
+                                bubbleParams?.y = dragCoords[1].toInt()
                                 bubbleComposeView?.let {
                                     windowManager?.updateViewLayout(it, bubbleParams)
                                 }

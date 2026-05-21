@@ -96,6 +96,14 @@ class SettingsManager(context: Context) {
         get() = prefs.getBoolean(KEY_ALLOW_DRAWING, true)
         set(value) = prefs.edit().putBoolean(KEY_ALLOW_DRAWING, value).apply()
 
+    var language: String
+        get() = prefs.getString("pref_language", "English") ?: "English"
+        set(value) = prefs.edit().putString("pref_language", value).apply()
+
+    var videoOrientation: String
+        get() = prefs.getString("pref_video_orientation", "Auto") ?: "Auto"
+        set(value) = prefs.edit().putString("pref_video_orientation", value).apply()
+
     fun applyProfile(profileName: String) {
         this.profile = profileName
         when (profileName) {
