@@ -78,7 +78,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         } else "https://github.com/EvgenPlay05/FlowCapture/releases"
 
                         if (tagValue.isNotEmpty()) {
-                            val currentVersionCode = 101 // matching 1.0.1
+                            val currentVersionCode = 102 // matching 1.0.2
                             val parsedVersionCode = parseVersionCode(tagValue)
                             if (parsedVersionCode > currentVersionCode) {
                                 UpdateResult.NewUpdateAvailable(tagValue, releaseUrl)

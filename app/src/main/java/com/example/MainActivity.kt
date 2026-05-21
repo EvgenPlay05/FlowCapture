@@ -55,6 +55,7 @@ import java.util.*
 class MainActivity : ComponentActivity() {
 
     private val viewModel: MainViewModel by viewModels()
+    private var isTileLaunch = false
 
     // Screen recorder intent launcher
     private val recordLauncher = registerForActivityResult(
@@ -68,8 +69,14 @@ class MainActivity : ComponentActivity() {
             }
             ContextCompat.startForegroundService(this, serviceIntent)
             Toast.makeText(this, "Screen Capture service initialized!", Toast.LENGTH_SHORT).show()
+            if (isTileLaunch) {
+                moveTaskToBack(true)
+            }
         } else {
             Toast.makeText(this, "Screen recording authorization declined.", Toast.LENGTH_SHORT).show()
+            if (isTileLaunch) {
+                finish()
+            }
         }
     }
 
@@ -112,6 +119,7 @@ class MainActivity : ComponentActivity() {
         // Handle Quick Settings Tile start shortcut
         val startDirect = intent.getBooleanExtra("START_RECORDING_DIRECT", false)
         if (startDirect) {
+            isTileLaunch = true
             validateAndRequestMediaProjection()
         }
 
@@ -144,6 +152,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         val startDirect = intent.getBooleanExtra("START_RECORDING_DIRECT", false)
         if (startDirect) {
+            isTileLaunch = true
             validateAndRequestMediaProjection()
         }
     }
@@ -2096,7 +2105,7 @@ fun AboutTab(
                                             modifier = Modifier.fillMaxWidth(),
                                             shape = RoundedCornerShape(8.dp)
                                         ) {
-                                            Text("Download v1.0.2 Stable", fontWeight = FontWeight.Bold)
+                                            Text("Download ${status.version}", fontWeight = FontWeight.Bold)
                                         }
                                     }
                                 }

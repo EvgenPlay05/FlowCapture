@@ -12,7 +12,7 @@ object LiveTranslator {
             "tab_settings" to "Settings",
             "tab_about" to "About",
             
-            "app_version" to "v1.0.1 Unstable Beta",
+            "app_version" to "v1.0.2 Unstable Beta",
             "app_subtitle" to "Capture screen, games and annotations in style",
             "active_profile" to "ACTIVE PROFILE",
             "hd_details" to "Details density",
@@ -88,7 +88,7 @@ object LiveTranslator {
             "tab_settings" to "Налаштування",
             "tab_about" to "Про додаток",
             
-            "app_version" to "v1.0.1 Unstable Beta",
+            "app_version" to "v1.0.2 Unstable Beta",
             "app_subtitle" to "Записуйте екран, ігри та малюйте зі стилем",
             "active_profile" to "АКТИВНИЙ ПРОФІЛЬ",
             "hd_details" to "Щільність пікселів",
@@ -164,7 +164,7 @@ object LiveTranslator {
             "tab_settings" to "Настройки",
             "tab_about" to "О приложении",
             
-            "app_version" to "v1.0.1 Unstable Beta",
+            "app_version" to "v1.0.2 Unstable Beta",
             "app_subtitle" to "Записывайте экран, игры и рисуйте со стилем",
             "active_profile" to "АКТИВНЫЙ ПРОФИЛЬ",
             "hd_details" to "Плотность пикселей",
